@@ -1,4 +1,6 @@
 import type { MetaFunction } from "@remix-run/node";
+import { useState } from "react";
+
 
 export const meta: MetaFunction = () => {
   return [
@@ -8,6 +10,26 @@ export const meta: MetaFunction = () => {
 };
 
 export default function Index() {
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState("");
+
+  async function callNode() {
+    setLoading(true);
+    try {
+      const res = await fetch("/mynode/node", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hello: "world" }),
+      });
+      const text = await res.text();
+      setResult(`${res.status} ${res.statusText}\n${text}`);
+    } catch (e) {
+      setResult(String(e));
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div className="font-sans p-4">
       <h1 className="text-3xl">Welcome to Remix</h1>
@@ -43,6 +65,16 @@ export default function Index() {
           </a>
         </li>
       </ul>
+
+      <div className="mt-6">
+        <button
+          onClick={callNode}
+          className="px-3 py-1 bg-blue-600 text-white rounded"
+        >
+          {loading ? "调用中..." : "调用 Node 函数 (/mynode/node)"}
+        </button>
+        <pre className="mt-2 whitespace-pre-wrap text-sm">{result}</pre>
+      </div>
     </div>
   );
 }
