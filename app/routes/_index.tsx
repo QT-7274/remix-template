@@ -10,24 +10,34 @@ export const meta: MetaFunction = () => {
 };
 
 export default function Index() {
-  const [loading, setLoading] = useState(false);
+  const [loadingPath, setLoadingPath] = useState<string | null>(null);
   const [result, setResult] = useState("");
 
-  async function callNode() {
-    setLoading(true);
+  async function call(path: string, init?: RequestInit) {
+    setLoadingPath(path);
+    const started = Date.now();
     try {
-      const res = await fetch("/mynode/node", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ hello: "world" }),
-      });
-      const text = await res.text();
-      setResult(`${res.status} ${res.statusText}\n${text}`);
+      const res = await fetch(path, { method: "POST", ...init });
+      const text = await res.text().catch(() => "<no body>");
+      setResult(`[${path}] ${res.status} ${res.statusText} (${Date.now() - started}ms)\n${text}`);
     } catch (e) {
-      setResult(String(e));
+      setResult(`[${path}] Error (${Date.now() - started}ms)\n${String(e)}`);
     } finally {
-      setLoading(false);
+      setLoadingPath(null);
     }
+  }
+
+  function Btn({ path, label }: { path: string; label: string }) {
+    const busy = loadingPath === path;
+    return (
+      <button
+        onClick={() => call(path)}
+        className="px-3 py-1 bg-blue-600 text-white rounded disabled:opacity-50"
+        disabled={!!loadingPath}
+      >
+        {busy ? `调用中... ${label}` : label}
+      </button>
+    );
   }
 
   return (
@@ -66,13 +76,19 @@ export default function Index() {
         </li>
       </ul>
 
-      <div className="mt-6">
-        <button
-          onClick={callNode}
-          className="px-3 py-1 bg-blue-600 text-white rounded"
-        >
-          {loading ? "调用中..." : "调用 Node 函数 (/mynode/node)"}
-        </button>
+      <div className="mt-6 space-y-3">
+        <h2 className="text-xl">Node 函数测试</h2>
+        <div className="flex flex-wrap gap-2">
+          <Btn path="/mynode/success" label="成功 /mynode/success" />
+          <Btn path="/mynode/fail" label="失败 /mynode/fail" />
+          <Btn path="/mynode/retry" label="重试 /mynode/retry" />
+          <Btn path="/mynode/debug" label="调试中断 /mynode/debug (~10s)" />
+          <Btn path="/mynode/timeout" label="调用超时 /mynode/timeout (~15s)" />
+          <Btn path="/mynode/quota" label="调用超限 /mynode/quota" />
+          <Btn path="/mynode/exception" label="代码异常 /mynode/exception" />
+          <Btn path="/mynode/node" label="代码异常(旧用例) /mynode/node" />
+        </div>
+
         <pre className="mt-2 whitespace-pre-wrap text-sm">{result}</pre>
       </div>
     </div>
